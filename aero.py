@@ -1,4 +1,6 @@
-
+"""
+basic functions for introduction to aerodynamics for engineering students
+"""
 #%% IMPORTS
 from numpy import pi
 
@@ -42,37 +44,56 @@ class naca:
         if type(Number) == int:
             Number = str(Number)
             
-        assert type(Number) == str , "Integer must be passed!"
-        assert  len(Number) ==   4 , "The string must contain 4 digits!"
+        assert len(Number)  <= 8   ,"The NACA number must be less than or equal to 8 digits!"
+        assert len(Number)  >= 4   ,"The NACA number must be greater than or equal to 4 digits!"
         
-        #Variables
-        self.Number      = Number
-        self._m          = int( Number[0] )/100
-        self._p          = int( Number[1] )/10
+        #The airfoil variables
+        self.digits      = len(Number)
+        
+        if self.digits == 4 :
+            self.Number      = Number
+            self._M          = int( Number[0] )
+            self._m          = self._M/100
+            self._P          = int( Number[1] )
+            self._p          = self._P/10
+            self._T          = int( Number[2:4] )
+            self._t          = self._T/100
+            
+            self._a          = (0.2969, -0.1260, -0.3516, 0.2843, -0.1015, -0.1036)
+        else:
+            assert False, "Unrecognized NACA!!"
+            
+        #Useful functions
         
         self.__linspace  = lambda a,b,c: np.linspace(a,b,c)
         self.__arange    = lambda a,b,c: np.arange(a,b,c)
-            
-        self.thetaP     = np.arccos( 1 - 2 * self._p )
-        m               = self._m
-        p               = self._p
-        thetaP          = self.thetaP
-        def An(n, alpha):
-            if   n ==0:
-                cA0     = ( m*(2*p -1)/pi ) * ( thetaP/(p*p) + ( pi - thetaP )/( (1-p)*(1-p) ) ) + ( m * np.sin( thetaP )/pi ) * ( 1/(p*p) - 1/( (1-p)*(1-p) ) )
-                A0      = lambda alpha: alpha - cA0
-                return A0(alpha)
-            elif n ==1:
-                A1      = (1/pi) * ( ( m/(p*p) ) * ( 2*(2*p-1)*np.sin( thetaP ) + thetaP + np.sin(thetaP)*np.cos(thetaP) ) + ( m/(((1-p)*(1-p))) )*( pi - thetaP -2*(2*p-1)*np.sin(thetaP) - np.sin(thetaP)*np.cos(thetaP) ) ) 
-                return A1
-            else:
-                An      = lambda n: 0.5*( 2*(2*p-1)*np.sin(n*thetaP)/n + np.sin((n-1)*thetaP)/(n-1) + np.sin((n+1)*thetaP)/(n+1) ) * ( 2*m/(pi*p*p) - 2*m/(pi*(1-p)*(1-p)) )
-                return An(n)
-        self.An         = lambda n, alpha=0: An(n,alpha)
-        self.Cmc4       = (self.An(2) - self.An(1))*pi/4
-        self.cl         = lambda alpha: 2 * pi * (An(0,alpha) + self.An(1)/2)
+        self.__zeros     = lambda a: np.zeros(a)
+        self.__sin       = lambda a: np.sin(a)
+        self.__cos       = lambda a: np.cos(a)
+        self.__atan      = lambda a: np.arctan(a)
+        self.__sqrt      = lambda a: np.sqrt(a)
+        #For airfoil Propeties
+        if self.digits == 4:
+            self.thetaP     = np.arccos( 1 - 2 * self._p )
+            m               = self._m
+            p               = self._p
+            thetaP          = self.thetaP
+            def An(n, alpha):
+                if   n ==0:
+                    cA0     = ( m*(2*p -1)/pi ) * ( thetaP/(p*p) + ( pi - thetaP )/( (1-p)*(1-p) ) ) + ( m * np.sin( thetaP )/pi ) * ( 1/(p*p) - 1/( (1-p)*(1-p) ) )
+                    A0      = lambda alpha: alpha - cA0
+                    return A0(alpha)
+                elif n ==1:
+                    A1      = (1/pi) * ( ( m/(p*p) ) * ( 2*(2*p-1)*np.sin( thetaP ) + thetaP + np.sin(thetaP)*np.cos(thetaP) ) + ( m/(((1-p)*(1-p))) )*( pi - thetaP -2*(2*p-1)*np.sin(thetaP) - np.sin(thetaP)*np.cos(thetaP) ) ) 
+                    return A1
+                else:
+                    An      = lambda n: 0.5*( 2*(2*p-1)*np.sin(n*thetaP)/n + np.sin((n-1)*thetaP)/(n-1) + np.sin((n+1)*thetaP)/(n+1) ) * ( 2*m/(pi*p*p) - 2*m/(pi*(1-p)*(1-p)) )
+                    return An(n)
+            self.An         = lambda n, alpha=0: An(n,alpha)
+            self.Cmc4       = (self.An(2) - self.An(1))*pi/4
+            self.cl         = lambda alpha: 2 * pi * (An(0,alpha) + self.An(1)/2)
     
-    def uProfile(self, export = False, name = ""):
+    def profile(self,numberOfPoints=500, export = False, name = ""):
         """
         plots the upper airfoil profile.
         Parameters
@@ -89,18 +110,51 @@ class naca:
         """
         m       = self._m
         p       = self._p
+        t       = self._t
+        x       = self.__linspace(0,1,numberOfPoints)
+        a       = self._a
         
-        x       = self.__linspace(0,p,100)
-        y       = self.__linspace(p,1,100)
-        z1      = ( m / (p*p) ) * ( 2*p*x-(x*x) )
-        z2      = ( m / ((p-1)*(p-1)) ) * ( 2*p*y - y*y + (1-2*p) )
+        if self.digits == 4:
+            yc      = self.__zeros(numberOfPoints)
+            yt      = self.__zeros(numberOfPoints)
+            yu      = self.__zeros(numberOfPoints)
+            yl      = self.__zeros(numberOfPoints)
+            xu      = self.__zeros(numberOfPoints)
+            xl      = self.__zeros(numberOfPoints)
+            dyc_dx  = self.__zeros(numberOfPoints)
+            theta   = self.__zeros(numberOfPoints)
+            
+            
+            for i in range(numberOfPoints):
+                #Camber and Gradient
+                if x[i] >= 0 and x[i] <= p:
+                    yc[i]       = (m/(p*p)) * (2*p*x[i] - x[i]*x[i])
+                    dyc_dx[i]   = 2*(m/(p*p)) * (p - x[i])
+                    
+                elif x[i] > p and x[i] <= 1:
+                    yc[i]       = (m/((1-p)**2)) * (1 - 2*p + 2*p*x[i] - (x[i]*x[i]))
+                    dyc_dx[i]   = 2*(m/((1-p)**2)) * (p-x[i])
+                
+                theta[i]    = self.__atan(dyc_dx[i])
+        
+                #Thickness distribution
+                yt[i]       = 5 * t * ( a[0]*self.__sqrt(x[i]) + a[1]*x[i] + a[2] * (x[i]**2) + a[3] * (x[i]**3) + a[4] * (x[i]**4) )
+                
+                #Upper surface points
+                xu[i]       = x [i] - yt[i] * self.__sin( theta[i] )
+                yu[i]       = yc[i] + yt[i] * self.__cos( theta[i] )
+                
+                #Lower surface points
+                xl[i]       = x [i] + yt[i] * self.__sin( theta[i] )
+                yl[i]       = yc[i] - yt[i] * self.__cos( theta[i] )
+                
         
         import matplotlib.pyplot as plt
         
-        plt.plot(x,z1, 'r')
-        plt.plot(y,z2, 'b')
-        plt.xlim(0, 1)
-        plt.ylim(0, 0.1)
+        plt.axis('equal')
+        plt.plot(x,yc,'y',linewidth=1)
+        plt.plot(xu,yu,'r',linewidth=1)
+        plt.plot(xl,yl,'r',linewidth=1)
         plt.ylabel("Zc")
         plt.xlabel("Wing Length(%)")
         if name == "":
@@ -109,8 +163,8 @@ class naca:
         
         if (export == True):
             plt.savefig(name)
-            
         plt.show()
+        
     def plotCl(self, alphaMax = pi, dalpha = pi/180, unit = "deg", export = False, name = ""):
         """
         plots the approximation of the lift coefficient (CL) as function of the angle of attack.
@@ -171,6 +225,5 @@ class naca:
        
 a = naca(2412)
 
-
-
+a.profile()
 
