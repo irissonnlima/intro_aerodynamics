@@ -93,16 +93,20 @@ class naca:
             self.Cmc4       = (self.An(2) - self.An(1))*pi/4
             self.cl         = lambda alpha: 2 * pi * (An(0,alpha) + self.An(1)/2)
     
-    def profile(self,numberOfPoints=500, export = False, name = ""):
+    def profile(self, name = "",chord = True,numberOfPoints=500, export = False):
         """
-        plots the upper airfoil profile.
+        plots the airfoil profile (red) and the chord (green).
         Parameters
         ----------
-        export  : Boolean, optional
-            To export the graphic. The default is False.
         name    : String, optional
             The title of the graphic. The default is "".
-
+        chord   : Boolean, optional
+            To draw the chord line. The default is True.
+        numberOfPoints: Integer, optional
+            Number of points in the plot. The default is 500.
+        export  : Boolean, optional
+            To export the graphic. The default is False.
+        
         Returns
         -------
         None.
@@ -151,11 +155,13 @@ class naca:
         
         import matplotlib.pyplot as plt
         
-        plt.axis('equal')
-        plt.plot(x,yc,'y',linewidth=1)
-        plt.plot(xu,yu,'r',linewidth=1)
-        plt.plot(xl,yl,'r',linewidth=1)
+        plt.figure(figsize=[10,10])
+        if chord == True:
+            plt.plot(x ,yc,'forestgreen',linewidth=1)
+        plt.plot(xu,yu,'r',linewidth=2)
+        plt.plot(xl,yl,'r',linewidth=2)
         plt.ylabel("Zc")
+        plt.axis('equal')
         plt.xlabel("Wing Length(%)")
         if name == "":
             name =  ("NACA "+self.Number+ " Airfoil Upper Profile")
